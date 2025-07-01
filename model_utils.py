@@ -1,6 +1,7 @@
 """
 https://github.com/allenai/open-instruct
 """
+import sys, os
 import torch
 import tqdm
 from transformers import StoppingCriteria, StoppingCriteriaList
@@ -93,15 +94,24 @@ def generate_completions(model, tokenizer, prompts, batch_size=1, stop_id_sequen
 
         # try:
         stop_criteria = KeywordsStoppingCriteria(stop_id_sequences, tokenizer)
-        batch_outputs = model.generate(
-            input_ids=batch_input_ids,
-            attention_mask=attention_mask,
-            stopping_criteria=StoppingCriteriaList([stop_criteria]),
-            # stopping_criteria=[KeyWordsCriteria(stop_id_sequences)] if stop_id_sequences else None,
-            # stopping_criteria=[KeyWordsCriteriaTrunc(stop_id_sequences, batch_input_ids.size(1))] if stop_id_sequences else None,
-            **generation_kwargs
-        )
-
+        try:
+            batch_outputs = model.generate(
+                input_ids=batch_input_ids,
+                attention_mask=attention_mask,
+                stopping_criteria=StoppingCriteriaList([stop_criteria]),
+                # stopping_criteria=[KeyWordsCriteria(stop_id_sequences)] if stop_id_sequences else None,
+                # stopping_criteria=[KeyWordsCriteriaTrunc(stop_id_sequences, batch_input_ids.size(1))] if stop_id_sequences else None,
+                **generation_kwargs
+            )
+        except RuntimeError as e:
+            if "must match the size of tensor" in str(e):
+                # this is a common error when the model is not able to generate any output.
+                # this is usually caused by the model not being able to handle the input sequence length.
+                # we can just skip this batch and continue to the next one.
+                print(f"Skipping batch {i//batch_size} due to error: {e}")
+                continue
+            else:
+                raise e
         # the stopping criteria is applied at batch level, so if other examples are not stopped, the entire batch will continue to generate.
         # so some outputs still have the stop sequence, which we need to remove.
         # if stop_id_sequences:
@@ -188,14 +198,55 @@ def load_hf_lm_and_tokenizer(
         # return "", tokenizer
         # defaul load in float16
         model = AutoModelForCausalLM.from_pretrained(model_name_or_path,
-                                                     torch_dtype=torch.float16,
+                                                     #torch_dtype=torch.float16,
                                                      device_map=device_map,
                                                      trust_remote_code=True,
-                                                     use_safetensors=use_safetensors)
+                                                     #use_safetensors=use_safetensors,
+                                                     )
         if torch.cuda.is_available():
             model = model.cuda()
         if load_in_half:
             model = model.half()
+    model.eval()
+    return model, tokenizer
+
+
+def load_nanogpt_and_tokenizer(
+        model_ckpt_file, 
+        load_in_half=True,
+    ):
+    import torch 
+    from transformers import GPT2Tokenizer,GPT2LMHeadModel
+    sys.path.append("../nanoGPT")
+    from model import GPT, GPTConfig #nanogpt
+
+    tokenizer = GPT2Tokenizer.from_pretrained("gpt2", padding_side='left')
+    # set pad token to eos token if pad token is not set
+    if tokenizer.pad_token is None:
+        if tokenizer.unk_token:
+            tokenizer.pad_token = tokenizer.unk_token
+            tokenizer.pad_token_id = tokenizer.unk_token_id
+        elif tokenizer.eos_token:
+            tokenizer.pad_token = tokenizer.eos_token
+            tokenizer.pad_token_id = tokenizer.eos_token_id
+        else:
+            raise ValueError("You are using a new tokenizer without a pad token."
+                            "This is not supported by this script.")
+
+
+
+    print(f"Resuming training from {model_ckpt_file}")
+    # resume training from a checkpoint.
+    checkpoint = torch.load(model_ckpt_file, map_location="cuda" if torch.cuda.is_available() else "cpu")
+    
+    nanogpt_state_dict = checkpoint['model']
+    gpt2_state_dict = GPT.to_gpt2_state_dict(nanogpt_state_dict)
+    model = GPT2LMHeadModel.from_pretrained("gpt2", state_dict=gpt2_state_dict, ignore_mismatched_sizes=True)
+
+    if torch.cuda.is_available():
+        model = model.cuda()
+    if load_in_half:
+        model = model.half()
     model.eval()
     return model, tokenizer
 

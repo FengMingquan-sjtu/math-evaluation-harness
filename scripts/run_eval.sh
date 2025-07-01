@@ -1,7 +1,33 @@
 set -ex
 
-PROMPT_TYPE=$1
-MODEL_NAME_OR_PATH=$2
+PROMPT_TYPE="cot"
+MODEL_NAME_OR_PATH=$1
+OUTPUT_DIR=$2
+# ======= nanogpt ======
+#CUDA_VISIBLE_DEVICES=1 bash scripts/run_eval.sh ../nanoGPT/out/cont-gpt2-124M-owm-7.5B-0.5rho/2025-06-27_16-52-44/ckpt-30000.pt ../nanoGPT/out/cont-gpt2-124M-owm-7.5B-0.5rho/2025-06-27_16-52-44/ckpt-30000/math_eval
+#CUDA_VISIBLE_DEVICES=1 bash scripts/run_eval.sh ../nanoGPT/out/cont-gpt2-owm-37B/ckpt.pt ../nanoGPT/out/cont-gpt2-owm-37B/math_eval
+#CUDA_VISIBLE_DEVICES=1 bash scripts/run_eval.sh ../nanoGPT/out/cont-gpt2-124M-owm-15B/ckpt-30000.pt ../nanoGPT/out/cont-gpt2-124M-owm-15B/ckpt-30000/math_eval
+#CUDA_VISIBLE_DEVICES=1 bash scripts/run_eval.sh ../nanoGPT/out/cont-gpt2-124M-owm-15B/ckpt-14000.pt ../nanoGPT/out/cont-gpt2-124M-owm-15B/ckpt-14000/math_eval
+
+
+#CUDA_VISIBLE_DEVICES=0 bash scripts/run_eval.sh ../nanoGPT/out/cont-gpt2-124M-owm-7.5B-0.1rho/2025-06-29_16-26-24/ckpt-100000.pt ../nanoGPT/out/cont-gpt2-124M-owm-7.5B-0.1rho/2025-06-29_16-26-24/ckpt-100000/math_eval
+#CUDA_VISIBLE_DEVICES=4 bash scripts/run_eval.sh ../nanoGPT/out/cont-gpt2-124M-owm-7.5B-0.2rho/2025-06-29_15-38-38/ckpt-60000.pt ../nanoGPT/out/cont-gpt2-124M-owm-7.5B-0.2rho/2025-06-29_15-38-38/ckpt-60000/math_eval
+#CUDA_VISIBLE_DEVICES=5 bash scripts/run_eval.sh ../nanoGPT/out/cont-gpt2-124M-owm-7.5B-0.3rho/2025-06-29_15-39-51/ckpt-40000.pt ../nanoGPT/out/cont-gpt2-124M-owm-7.5B-0.3rho/2025-06-29_15-39-51/ckpt-40000/math_eval
+#CUDA_VISIBLE_DEVICES=5 bash scripts/run_eval.sh ../nanoGPT/out/cont-gpt2-124M-owm-7.5B-0.4rho/2025-06-28_21-08-15/ckpt-30000.pt ../nanoGPT/out/cont-gpt2-124M-owm-7.5B-0.4rho/2025-06-28_21-08-15/ckpt-30000/math_eval
+#CUDA_VISIBLE_DEVICES=6 bash scripts/run_eval.sh ../nanoGPT/out/cont-gpt2-124M-owm-7.5B-0.5rho/2025-06-28_20-58-46/ckpt-24000.pt ../nanoGPT/out/cont-gpt2-124M-owm-7.5B-0.5rho/2025-06-28_20-58-46/ckpt-24000/math_eval
+#CUDA_VISIBLE_DEVICES=0 bash scripts/run_eval.sh ../nanoGPT/out/cont-gpt2-124M-owm-7.5B-0.6rho/2025-06-28_19-40-12/ckpt-20000.pt ../nanoGPT/out/cont-gpt2-124M-owm-7.5B-0.6rho/2025-06-28_19-40-12/ckpt-20000/math_eval
+#CUDA_VISIBLE_DEVICES=3 bash scripts/run_eval.sh ../nanoGPT/out/cont-gpt2-124M-owm-7.5B-0.7rho/2025-06-28_19-48-55/ckpt-18000.pt ../nanoGPT/out/cont-gpt2-124M-owm-7.5B-0.7rho/2025-06-28_19-48-55/ckpt-18000/math_eval
+
+#CUDA_VISIBLE_DEVICES=4 bash scripts/run_eval.sh ../nanoGPT/out/cont-gpt2-124M-owm-7.5B-0.8rho/2025-06-28_19-52-54/ckpt-16000.pt ../nanoGPT/out/cont-gpt2-124M-owm-7.5B-0.8rho/2025-06-28_19-52-54/ckpt-16000/math_eval
+
+#CUDA_VISIBLE_DEVICES=7 bash scripts/run_eval.sh ../nanoGPT/out/cont-gpt2-124M-owm-7.5B-1.0rho/2025-06-29_11-51-42/ckpt-12000.pt ../nanoGPT/out/cont-gpt2-124M-owm-7.5B-1.0rho/2025-06-29_11-51-42/ckpt-12000/math_eval
+
+
+
+
+
+#bash scripts/run_eval.sh gpt2 ../nanoGPT/out/gpt2
+#bash scripts/run_eval.sh TinyLlama/TinyLlama-1.1B-intermediate-step-1431k-3T  ../nanoGPT/out/tinyallama
 
 # ======= Base Models =======
 # PROMPT_TYPE="cot" # direct / cot / pal / tool-integrated
@@ -17,15 +43,16 @@ MODEL_NAME_OR_PATH=$2
 # MODEL_NAME_OR_PATH=${HF_MODEL_DIR}/deepseek/deepseek-math-7b-instruct
 
 
-OUTPUT_DIR=${MODEL_NAME_OR_PATH}/math_eval
-DATA_NAMES="gsm8k,minerva_math"
-# DATA_NAMES="gsm8k,minerva_math,svamp,asdiv,mawps,tabmwp,mathqa,mmlu_stem,sat_math"
+
+# DATA_NAMES="gsm8k,minerva_math"
+#DATA_NAMES="gsm8k,minerva_math,svamp,asdiv,mawps,tabmwp,mathqa,mmlu_stem,sat_math"
+DATA_NAMES="gsm8k"
 SPLIT="test"
 NUM_TEST_SAMPLE=-1
 
 
 # single-gpu
-CUDA_VISIBLE_DEVICES=0 TOKENIZERS_PARALLELISM=false \
+TOKENIZERS_PARALLELISM=false \
 python3 -u math_eval.py \
     --model_name_or_path ${MODEL_NAME_OR_PATH} \
     --output_dir ${OUTPUT_DIR} \
@@ -39,20 +66,27 @@ python3 -u math_eval.py \
     --top_p 1 \
     --start 0 \
     --end -1 \
-    --use_vllm \
     --save_outputs \
-    # --overwrite \
+    --max_tokens_per_call 200 \
+    --batch_size 128 \
+    --overwrite
+    # --use_hf \
+    # --use_vllm \
 
 
 # multi-gpu
-# python3 scripts/run_eval_multi_gpus.py \
+#python3 scripts/run_eval_multi_gpus.py \
 #     --model_name_or_path $MODEL_NAME_OR_PATH \
 #     --output_dir $OUTPUT_DIR \
 #     --data_names ${DATA_NAMES} \
 #     --prompt_type "cot" \
 #     --temperature 0 \
-#     --use_vllm \
 #     --save_outputs \
+#     --split_data_over_gpus \
 #     --available_gpus 0,1,2,3,4,5,6,7 \
 #     --gpus_per_model 1 \
+#     --max_tokens_per_call 128 \
+#     --batch_size 256 \
+#     --use_hf \
 #     --overwrite
+#     --use_vllm \

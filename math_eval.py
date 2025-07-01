@@ -2,7 +2,7 @@ import random
 import os
 import argparse
 import time
-from vllm import LLM, SamplingParams
+
 from datetime import datetime
 from tqdm import tqdm
 
@@ -15,7 +15,7 @@ from parser import *
 from trajectory import *
 from data_loader import load_data
 from python_executor import PythonExecutor
-from model_utils import load_hf_lm_and_tokenizer, generate_completions
+from model_utils import load_hf_lm_and_tokenizer, generate_completions, load_nanogpt_and_tokenizer
 
 
 def parse_args():
@@ -36,6 +36,8 @@ def parse_args():
     parser.add_argument("--max_tokens_per_call", default=1024, type=int)
     parser.add_argument("--shuffle", action="store_true")
     parser.add_argument("--use_vllm", action="store_true")
+    parser.add_argument("--use_hf", action="store_true")
+    parser.add_argument("--batch_size", default=32, type=int)
     parser.add_argument("--save_outputs", action="store_true")
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--use_safetensors", action="store_true")
@@ -87,16 +89,18 @@ def setup(args):
     # load model
     available_gpus = os.environ['CUDA_VISIBLE_DEVICES'].split(',')
     if args.use_vllm:
+        from vllm import LLM
         llm = LLM(model=args.model_name_or_path, tensor_parallel_size=len(available_gpus), trust_remote_code=True)
         tokenizer = None
-    else:
+    elif args.use_hf:
         llm, tokenizer =  load_hf_lm_and_tokenizer(
                 model_name_or_path=args.model_name_or_path, 
                 load_in_half=True,
                 use_fast_tokenizer=True,
                 use_safetensors=args.use_safetensors,
             )
-
+    else:# use nanogpt
+        llm, tokenizer = load_nanogpt_and_tokenizer(args.model_name_or_path, )
     # infer & eval
     data_list = args.data_names.split(',')
     results = []
@@ -181,6 +185,7 @@ def main(llm, tokenizer, data_name, args):
         # get all outputs
         prompts = [item[1] for item in current_prompts]
         if args.use_vllm:
+            from vllm import SamplingParams
             outputs = llm.generate(prompts, SamplingParams(
                             temperature=args.temperature,
                             top_p=args.top_p,
@@ -197,7 +202,7 @@ def main(llm, tokenizer, data_name, args):
                 tokenizer=tokenizer,
                 prompts=prompts,
                 max_new_tokens=args.max_tokens_per_call,
-                batch_size=16,
+                batch_size=args.batch_size,
                 stop_id_sequences=stop_words,
             )
 

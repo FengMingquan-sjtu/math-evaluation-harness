@@ -1,19 +1,22 @@
 """
 This scripts is deprecated.
 """
+import sys
+sys.path.append('./')
 import os
 import time
 import torch
 import subprocess
 import argparse
 from multiprocessing import Pool
-
+from data_loader import load_data
 from summarize_results import summarize_results
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name_or_path", default="gpt-4", type=str)
     parser.add_argument("--data_names", default="gsm8k,minerva_math,math,gsm_hard,svamp,tabmwp,asdiv,mawps", type=str)
+    parser.add_argument("--data_dir", default="./data", type=str)
     parser.add_argument("--output_dir", default="/mnt/project/tora/outputs", type=str)
     parser.add_argument("--prompt_type", default="tool-integrated", type=str, choices=["direct", "cot", "pal", "tool-integrated", "self-instruct", "self-instruct-boxed", "tora", "pal", "cot", "wizard_zs", "platypus_fs", "deepseek-math", "kpmath"])
     parser.add_argument("--split", default="test", type=str)
@@ -28,6 +31,9 @@ def parse_args():
     parser.add_argument("--available_gpus", default=None, type=str)
     parser.add_argument("--split_data_over_gpus", action="store_true")
     parser.add_argument("--use_vllm", action="store_true")
+    parser.add_argument("--use_hf", action="store_true")
+    parser.add_argument("--batch_size", default=32, type=int)
+    parser.add_argument("--max_tokens_per_call", default=512, type=int)
     parser.add_argument("--save_outputs", action="store_true")
     parser.add_argument("--use_safetensors", action="store_true")
     parser.add_argument("--overwrite", action="store_true")
@@ -36,8 +42,6 @@ def parse_args():
 
 args = parse_args()
 
-if not os.path.exists(args.model_name_or_path):
-    raise FileNotFoundError(args.model_name_or_path)
 
 data_list = args.data_names.split(',')
 
@@ -50,7 +54,8 @@ start_end_list = [(args.start, args.end) for _ in range(len(data_list))]
 
 if args.split_data_over_gpus:
     assert len(data_list) == 1
-    assert args.num_test_sample != -1
+    if args.num_test_sample == -1:
+        args.num_test_sample = len(load_data(data_list[0], args.split, args.data_dir))
     num_gpus = len(available_gpus)
     data_list = [data_list[0] for _ in range(num_gpus)]
     num_test_sample_per_gpu = args.num_test_sample // num_gpus
@@ -88,7 +93,13 @@ for i, data_name in enumerate(data_list):
     if args.use_safetensors:
         cmd += "--use_safetensors "
     if args.overwrite:
-        cmd += "--overwrite"
+        cmd += "--overwrite "
+    if args.use_hf:
+        cmd += "--use_hf "
+    if args.batch_size:
+        cmd += f"--batch_size {args.batch_size} "
+    if args.max_tokens_per_call:
+        cmd += f"--max_tokens_per_call {args.max_tokens_per_call} "
 
     # cmd += " & "
     # print(cmd)
