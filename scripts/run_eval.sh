@@ -1,6 +1,6 @@
 set -ex
 
-PROMPT_TYPE="cot"
+PROMPT_TYPE="direct" # direct / cot / pal / tool-integrated
 MODEL_NAME_OR_PATH=$1
 OUTPUT_DIR=$2
 # ======= nanogpt ======
@@ -22,7 +22,7 @@ OUTPUT_DIR=$2
 
 #CUDA_VISIBLE_DEVICES=7 bash scripts/run_eval.sh ../nanoGPT/out/cont-gpt2-124M-owm-7.5B-1.0rho/2025-06-29_11-51-42/ckpt-12000.pt ../nanoGPT/out/cont-gpt2-124M-owm-7.5B-1.0rho/2025-06-29_11-51-42/ckpt-12000/math_eval
 
-
+#CUDA_VISIBLE_DEVICES=7 bash scripts/run_eval.sh ../nanoGPT/out/cont-gpt2-1.5B-owm-15B/2025-07-02_21-50-52/ckpt-26000.pt ../nanoGPT/out/cont-gpt2-1.5B-owm-15B/2025-07-02_21-50-52/ckpt-26000/math_eval
 
 
 
@@ -44,16 +44,16 @@ OUTPUT_DIR=$2
 
 
 
-# DATA_NAMES="gsm8k,minerva_math"
+# DATA_NAMES="gsm8k" --max_tokens_per_call 200
 #DATA_NAMES="gsm8k,minerva_math,svamp,asdiv,mawps,tabmwp,mathqa,mmlu_stem,sat_math"
-DATA_NAMES="gsm8k"
+DATA_NAMES="mathqa"
 SPLIT="test"
 NUM_TEST_SAMPLE=-1
 
 
 # single-gpu
 TOKENIZERS_PARALLELISM=false \
-python3 -u math_eval.py \
+/cpfs/user/fengmingquan/miniconda3/envs/nanogpt/bin/python3 -u math_eval.py \
     --model_name_or_path ${MODEL_NAME_OR_PATH} \
     --output_dir ${OUTPUT_DIR} \
     --data_names ${DATA_NAMES} \
@@ -67,8 +67,8 @@ python3 -u math_eval.py \
     --start 0 \
     --end -1 \
     --save_outputs \
-    --max_tokens_per_call 200 \
-    --batch_size 128 \
+    --max_tokens_per_call 5 \
+    --batch_size 32 \
     --overwrite
     # --use_hf \
     # --use_vllm \

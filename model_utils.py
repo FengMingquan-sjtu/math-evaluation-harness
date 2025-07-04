@@ -241,7 +241,16 @@ def load_nanogpt_and_tokenizer(
     
     nanogpt_state_dict = checkpoint['model']
     gpt2_state_dict = GPT.to_gpt2_state_dict(nanogpt_state_dict)
-    model = GPT2LMHeadModel.from_pretrained("gpt2", state_dict=gpt2_state_dict, ignore_mismatched_sizes=True)
+    n_layer = checkpoint['model_args']['n_layer']
+    n_layer_to_model_type = {
+        12: "gpt2",
+        24: "gpt2-medium",
+        36: "gpt2-large",
+        48: "gpt2-xl",
+    }
+    model_type = n_layer_to_model_type.get(n_layer, "gpt2")
+    print(f"Loading model type: {model_type} with {n_layer} layers")
+    model = GPT2LMHeadModel.from_pretrained(model_type, state_dict=gpt2_state_dict, ignore_mismatched_sizes=True)
 
     if torch.cuda.is_available():
         model = model.cuda()
